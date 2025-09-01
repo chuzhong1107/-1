@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>一键发送短信</title>
+  <style>
+    :root { --primary:#3b82f6; --bg:#f7f7fb; --text:#111827; --muted:#6b7280; }
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--text); margin:0}
+    .wrap{max-width:680px; margin:0 auto; padding:28px}
+    .card{background:#fff; border-radius:18px; box-shadow:0 10px 30px rgba(0,0,0,.06); padding:28px}
+    h1{font-size:22px; margin:0 0 8px}
+    p{line-height:1.7; color:var(--muted)}
+    .btn{display:inline-block; margin-top:18px; padding:14px 20px; border-radius:12px; background:var(--primary); color:#fff; text-decoration:none; font-weight:600}
+    .btn:active{transform:translateY(1px)}
+    .hint{font-size:13px; color:var(--muted); margin-top:14px}
+    .row{display:flex; gap:12px; margin-top:16px}
+    .row input, .row textarea{flex:1; padding:12px 14px; border:1px solid #e5e7eb; border-radius:10px; font-size:14px}
+    .row textarea{min-height:88px; resize:vertical}
+    .flex{display:flex; align-items:center; gap:10px}
+    .secondary{background:#11182710; color:#111827; font-weight:600}
+    .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:20px; background:#111827; color:#fff; padding:10px 14px; border-radius:10px; display:none}
+    .wx-mask{position:fixed; inset:0; background:rgba(0,0,0,.72); color:#fff; display:none; z-index:9999}
+    .wx-tip{position:absolute; right:18px; top:18px; text-align:right}
+    .wx-tip h3{margin:0 0 6px; font-size:18px}
+    .wx-tip p{margin:0; color:#e5e7eb}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>腾讯视频调查反馈</h1>
+      <p>点击下方按钮将自动打开您的短信应用，并填入预设短信内容。您也可以自行修改后再发送。</p>
+
+      <!-- 可在这里修改默认手机号和短信内容 -->
+      <div class="row">
+        <input id="phone" type="tel" placeholder="接收短信的手机号" value="18366663923" />
+      </div>
+      <div class="row">
+        <textarea id="msg" placeholder="短信内容">您好，我已填写完成腾讯视频调查问卷。</textarea>
+      </div>
+
+      <div class="flex" style="gap:12px; flex-wrap:wrap; margin-top:12px">
+        <a id="sendBtn" class="btn" href="#">一键发送短信</a>
+        <button id="copyBtn" class="btn secondary" type="button">复制短信内容</button>
+      </div>
+
+      <div class="hint">提示：若在微信内无法直接打开短信，请点击右上角“···” → 选择“在浏览器中打开”。</div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">已复制到剪贴板</div>
+  <div id="wxMask" class="wx-mask">
+    <div class="wx-tip">
+      <h3>在浏览器中打开</h3>
+      <p>微信内可能拦截短信跳转。请点击右上角 ··· 并选择“在浏览器中打开”，再点击“一键发送短信”。</p>
+    </div>
+  </div>
+
+  <script>
+    function isWeChat(){ return /MicroMessenger/i.test(navigator.userAgent) }
+    function isIOS(){ return /iPad|iPhone|iPod/i.test(navigator.userAgent) }
+
+    function buildSmsHref(phone, body){
+      const encoded = encodeURIComponent(body)
+      const joiner = isIOS() ? '&' : '?'
+      // 如果没有收件人，iOS 需要使用 sms:&body=...，Android 用 sms:?body=...
+      const target = phone ? phone : ''
+      return `sms:${target}${joiner}body=${encoded}`
+    }
+
+    function updateHref(){
+      const phone = document.getElementById('phone').value.trim()
+      const msg = document.getElementById('msg').value
+      const href = buildSmsHref(phone, msg)
+      document.getElementById('sendBtn').setAttribute('href', href)
+    }
+
+    function showToast(){
+      const t = document.getElementById('toast')
+      t.style.display = 'block'
+      setTimeout(()=> t.style.display='none', 1600)
+    }
+
+    // 初始化
+    updateHref()
+
+    // 绑定输入变更
+    document.getElementById('phone').addEventListener('input', updateHref)
+    document.getElementById('msg').addEventListener('input', updateHref)
+
+    // 复制按钮
+    document.getElementById('copyBtn').addEventListener('click', async ()=>{
+      const t = document.getElementById('msg').value
+      try{ await navigator.clipboard.writeText(t); showToast() }catch(e){ alert('复制失败，请手动长按选择复制。') }
+    })
+
+    // 微信内提示遮罩（首屏仅提示，不强制）
+    if(isWeChat()){
+      const mask = document.getElementById('wxMask')
+      mask.style.display = 'block'
+      mask.addEventListener('click', ()=> mask.style.display='none')
+    }
+
+    // 如果在桌面端，给出轻微提示（可选）
+    if(!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){
+      document.querySelector('.hint').innerText = '建议用手机打开本页以唤起短信。电脑端可复制短信内容后在手机发送。'
+    }
+  </script>
+</body>
+</html>
